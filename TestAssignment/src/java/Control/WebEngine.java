@@ -15,15 +15,24 @@ public class WebEngine {
      * Имя атрибута, под которым в session будет храниться true или false, которое
      * определяет начата ли пользовательсякая сессия
      */
-    static final String SESSION_ATTRIBUTE_NAME="login";
+    public static final String SESSION_ATTRIBUTE_NAME="login";
     /**
      * имя куки, в которую будет сохраняться логин
      */
-    static final String COOKIE_LOGIN_NAME="login";
+    public static final String COOKIE_LOGIN_NAME="login";
     /**
      * омя куки, в которую будет сохраняться хеш от пароль(в кукки будем хранить хеш от пароля, не сам пароль)
      */
-    static final String COOKIE_PASSWORDHASH_NAME="passwordHash";
+    public static final String COOKIE_PASSWORDHASH_NAME="passwordHash";
+    /**
+     * минимальная длина пароля при регистрации
+     */
+    public static final int PASSWORD_MIN_LENGTH=4;
+    /**
+     * максимальная длина пароля при регистрации
+     */
+    public static final int PASSWORD_MAX_LENGTH=255;
+    
     
     /**
      * Список авторизованых на данный момент пользователей
@@ -98,7 +107,7 @@ public class WebEngine {
      * Авторизация пользователя в системе. 
      * установление куки, запись пользователя в сесиию
      */
-    public static void Avtorizare(String login, String passwordHash, HttpServletResponse response, HttpSession session) throws UserAuthenticationException{
+    private static void Avtorizare(String login, String passwordHash, HttpServletResponse response, HttpSession session) throws UserAuthenticationException{
         //проверка на существование пользователя
         if (!usersMap.containsKey(login)){
             throw new UserAuthenticationException("Пользователь с таким логином не зарегистрирован. Зарегестрируйтесь пожалусйта!");
@@ -134,9 +143,60 @@ public class WebEngine {
      * регистрация пользователя в системе
      * @param user пользователь который будет зарегистрирован
      */
-    public static void RegisterWebUser(WebUser user){
+    private static void RegisterWebUser(WebUser user){
         usersMap.put(user.getLogin(), user);
     }
+    
+    
+    /**
+     * проверка паролья на соответсвие условиям 
+     * пока единственное условие : не меньше 4 симловов и не больше 255
+     */
+    private static boolean isRightPassowrd(String password){
+        if(password.length()<PASSWORD_MIN_LENGTH || password.length()>PASSWORD_MAX_LENGTH){
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * проверка логина на соответсиве условиям
+     * Английские буквы и цыфры, начинаться должен с буквы
+     */
+    private static boolean isRightLogin(String login){
+        char[] ch = login.toCharArray();
+        
+        for (char c : ch) {
+            //тут проверка на соответствие
+            if(!Character.isDigit(c)| !Character.isLetter(c)){
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    
+    /**
+     * регистрация пользователя в системе
+     */
+    public static void Registration(String login, String password, HttpServletResponse response, HttpSession session) throws UserAuthenticationException{
+        if(!isRightLogin(login)){
+            throw new UserAuthenticationException("неверный формат логина.можно вводить только английские буквы и арабские цифры");
+        }
+        if(!isRightPassowrd(password)){
+            throw new UserAuthenticationException("неверный формат паролья.можно вводить только английские буквы и арабские цифры");
+        }
+        if(usersMap.containsKey(login)){
+            throw new UserAuthenticationException("пользователь с таким логином уже существует");
+        }
+        //вроде все проверели, можно создавать пользователя
+        String hash = getHash(password);
+        WebUser newUser = new WebUser(login, hash);
+        RegisterWebUser(newUser);
+        //теперь авторизация(автоматический вход)
+        Avtorizare(login, hash, response, session);
+    }
+    
     
     /**
      * выполнение односторонней хеш функции
@@ -144,15 +204,15 @@ public class WebEngine {
      */
     public static String getHash(String inputString){
         try {
-        java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");//выбераем алгоритм шифрования
-        byte[] array = md.digest(inputString.getBytes());
-        StringBuffer sb = new StringBuffer();
-        for (int i = 0; i < array.length; ++i) {
-          sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1,3));
-       }
-        return sb.toString();
-    } catch (java.security.NoSuchAlgorithmException e) {
-    }
-    return null;
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");//выбераем алгоритм шифрования
+            byte[] array = md.digest(inputString.getBytes());
+            StringBuffer sb = new StringBuffer();
+            for (int i = 0; i < array.length; ++i) {
+              sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1,3));
+            }
+            return sb.toString();
+        }catch (java.security.NoSuchAlgorithmException e) {
+        }
+        return null;
     }
 }
