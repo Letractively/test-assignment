@@ -1,6 +1,9 @@
 
 package Servlets;
 
+import Control.UserAuthenticationException;
+import Control.UserMessage;
+import Control.WebEngine;
 import java.io.IOException;
 import java.io.PrintWriter;
 import javax.servlet.RequestDispatcher;
@@ -28,8 +31,34 @@ public class Login extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
            RequestDispatcher dispatcherJsp = request.getRequestDispatcher("/login.jsp");
+           UserMessage userMessage = null;
 
+           if(request.getParameter("login")!=null && request.getParameter("password")!=null && request.getParameter("operationtype")!=null){
+               //присутствуют и логин и пароль, значит была нажата кнопка ввойти/зарегистрироваться.
+               try{
+                   if(request.getParameter("operationtype").equalsIgnoreCase("login")){
+                       //нажали ввойти
+                       //проверяем, была ли нажата кнопка "сохранить меня"?
+                       boolean isToSave=false;
+                       if(request.getParameter("remember")!=null){
+                           isToSave=true;
+                       }
+                       WebEngine.Authenticate(request.getParameter("login"), request.getParameter("password"), response, request.getSession(),isToSave);
+                   }
+                   if(request.getParameter("operationtype").equalsIgnoreCase("register")){
+                       // нажали зарегистрироваться
+                       WebEngine.Registration(request.getParameter("login"), request.getParameter("password"), response, request.getSession());
+                   }
+               }catch (UserAuthenticationException ex){
+                   request.setAttribute("exception", ex);
+               }
+           }
            
+           
+           if(request.getAttribute("userException")!=null){
+               userMessage.setMessage(((Exception)request.getAttribute("exception")).getMessage());
+           }
+           //переходим на страницу
             if (dispatcherJsp!=null){
                 dispatcherJsp.forward(request, response);
             }
