@@ -1,11 +1,7 @@
 package Control;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -16,7 +12,23 @@ import javax.servlet.http.HttpSession;
  */
 public class WebEngine {
     /**
+     * Имя атрибута, под которым в session будет храниться true или false, которое
+     * определяет начата ли пользовательсякая сессия
+     */
+    static final String SESSION_ATTRIBUTE_NAME="login";
+    /**
+     * имя куки, в которую будет сохраняться логин
+     */
+    static final String COOKIE_LOGIN_NAME="login";
+    /**
+     * омя куки, в которую будет сохраняться хеш от пароль(в кукки будем хранить хеш от пароля, не сам пароль)
+     */
+    static final String COOKIE_PASSWORDHASH_NAME="passwordHash";
+    
+    /**
      * Список авторизованых на данный момент пользователей
+     * ключ - логин
+     * обект - обьект WebUser
      */
     private static Map<String,WebUser> usersMap = new HashMap<String, WebUser>();
     
@@ -25,8 +37,40 @@ public class WebEngine {
      * идентификация пользователя в системе.
      * проверка атрибута сессии.Проверка куки пользователя. Проверка сушествования такого пользователя в памяти
      */
-    public static void Identification() throws UserAuthenticationException{
-        if()
+    public static void Identification(HttpSession session, Cookie[] cookies, HttpServletResponse response) throws UserAuthenticationException{
+        Cookie cookieLogin = null;
+        Cookie cookiePasswordHash = null;
+        //сначала определяем начата ли наша сессия поверх Http
+        if(session.getAttribute(SESSION_ATTRIBUTE_NAME)!=null){
+            if (((Boolean)session.getAttribute(SESSION_ATTRIBUTE_NAME))==Boolean.TRUE){
+                //все нормально, сессия жива, пользователь определен.
+                return;
+            }
+        }
+        //ссесия не начата, возможно пользователь закрыл браузер
+        //проверяем, возможно есть сохранненные куки(была нажата кнопка "запомнить меня").
+        for (Cookie cookie : cookies) {
+            if(cookie.getName().equalsIgnoreCase(COOKIE_LOGIN_NAME)){
+                cookieLogin = cookie;
+            }
+            if(cookie.getName().equalsIgnoreCase(COOKIE_PASSWORDHASH_NAME)){
+                cookiePasswordHash = cookie;
+            }            
+        }
+        //проверяем куки
+        if(cookieLogin!=null & cookiePasswordHash!=null){
+            //куки есть, теперь проверяем, зарегистрирован ли такой пользователь c таким паролем в системе
+            if (!usersMap.containsKey(cookieLogin.getValue())){
+                if (usersMap.get(cookieLogin.getValue()).getPasswordHash().equals(cookiePasswordHash.getValue())){
+                    //все нормлаьно, куки те, авторизуеся по кукам
+                    Avtorizare(cookieLogin.getValue(), cookiePasswordHash.getValue(), response, session);
+                }else{
+                    throw new UserAuthenticationException("неверный пароль в Cookie");
+                }
+            }
+            throw new UserAuthenticationException("неверные данные в Cookie");
+        }
+        throw new UserAuthenticationException("Авторизуйтесь пожалуйста");
     }
     
     /**
@@ -60,14 +104,14 @@ public class WebEngine {
             throw new UserAuthenticationException("Пользователь с таким логином не зарегистрирован. Зарегестрируйтесь пожалусйта!");
         }
         //установление куки
-        Cookie loginCookie = new Cookie("login", login);
-        loginCookie.setMaxAge(-1); // -1 кука будет храниться до закрытия браузера
+        Cookie loginCookie = new Cookie(COOKIE_LOGIN_NAME, login);
+        loginCookie.setMaxAge(Integer.MAX_VALUE); // кука будет храниться постоянно
         response.addCookie(loginCookie);
-        Cookie passwordCookie =  new Cookie("passwordHash", passwordHash);
-        passwordCookie.setMaxAge(-1); // -1 кука будет храниться до закрытия браузера
+        Cookie passwordCookie =  new Cookie(COOKIE_PASSWORDHASH_NAME, passwordHash);
+        passwordCookie.setMaxAge(Integer.MAX_VALUE); // -1 кука будет храниться постоянно
         response.addCookie(passwordCookie);
         // установление отметку в сессии о том, что авторизация прошла успешно
-        session.setAttribute("login", true);
+        session.setAttribute(SESSION_ATTRIBUTE_NAME, true);
     }
     
     
@@ -76,14 +120,14 @@ public class WebEngine {
      */
     public static void Deavtorizare(HttpServletResponse response, HttpSession session){
         //установление куки
-        Cookie loginCookie = new Cookie("login", "");
+        Cookie loginCookie = new Cookie(COOKIE_LOGIN_NAME, "");
         loginCookie.setMaxAge(0); // 0 кука будет удалена
         response.addCookie(loginCookie);
-        Cookie passwordCookie =  new Cookie("passwordHash", "");
+        Cookie passwordCookie =  new Cookie(COOKIE_PASSWORDHASH_NAME, "");
         passwordCookie.setMaxAge(0); // 0 кука будет удалена
         response.addCookie(passwordCookie);
         // установление отметку в сессии о том, что пользовательская сессия закончена (не веб сессия)
-        session.setAttribute("login", false);
+        session.setAttribute(SESSION_ATTRIBUTE_NAME, false);
     }
     
     /**
@@ -100,7 +144,7 @@ public class WebEngine {
      */
     public static String getHash(String inputString){
         try {
-        java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+        java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");//выбераем алгоритм шифрования
         byte[] array = md.digest(inputString.getBytes());
         StringBuffer sb = new StringBuffer();
         for (int i = 0; i < array.length; ++i) {
