@@ -4,6 +4,7 @@
     Author     : Роман
 --%>
 
+<%@page import="Control.UserMessage"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
 <html>
@@ -14,8 +15,11 @@
     <body>
     <dir>
         <h1>Авторизация</h1>
-        <%= request.getSession().getAttributeNames() %>
-        <% request.getSession().setAttribute("my1", "value"); %>
+        <jsp:useBean id="userException" scope="page" class="UserMessage">
+        <% if(userException!=null)//yyyttyty %>
+        
+        <%= request.getSession().getAttribute("my1") %>
+        <% //request.getSession().setAttribute("my1", "value"); %>
         <form name="avtorization" id="avtorization" action="Login">
             <input type="text" placeholder="логин" id="login" name="login">
             <p><input type="password" placeholder="пароль" id="password" name="password">
@@ -24,6 +28,7 @@
                 <input type="hidden" value="login" name="operationtype" id="operationtype">
             <p><input type="button" value="Регистрация" onclick="document.getElementById('operationtype').value='register'; document.getElementById('avtorization').submit();"> 
         </form>
+        
     </dir>
      </body>
 </html>

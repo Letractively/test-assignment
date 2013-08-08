@@ -72,7 +72,7 @@ public class WebEngine {
             if (!usersMap.containsKey(cookieLogin.getValue())){
                 if (usersMap.get(cookieLogin.getValue()).getPasswordHash().equals(cookiePasswordHash.getValue())){
                     //все нормлаьно, куки те, авторизуеся по кукам
-                    Avtorizare(cookieLogin.getValue(), cookiePasswordHash.getValue(), response, session);
+                    Avtorizare(cookieLogin.getValue(), cookiePasswordHash.getValue(), response, session, true);
                 }else{
                     throw new UserAuthenticationException("неверный пароль в Cookie");
                 }
@@ -87,8 +87,9 @@ public class WebEngine {
      *  проверка логина и пароля
      * @throws UserAuthenticationException 
      * @return обьект пользователя
+     * @param isToSave нужно ли сохранять ссессию между сеансами браузера, была ли нажата кнопка "запомнить меня"
      */
-    public static void Authenticate(String login, String password, HttpServletResponse response, HttpSession session) throws UserAuthenticationException{
+    public static void Authenticate(String login, String password, HttpServletResponse response, HttpSession session, boolean isToSave) throws UserAuthenticationException{
         WebUser result;
         String hashPassword;
         if (!usersMap.containsKey(login)){
@@ -99,26 +100,29 @@ public class WebEngine {
             throw new UserAuthenticationException("Пароль не верный");
         }
         
-        Avtorizare(login, hashPassword, response, session);
+        Avtorizare(login, hashPassword, response, session, isToSave);
     }
     
     
     /**
      * Авторизация пользователя в системе. 
      * установление куки, запись пользователя в сесиию
+     * @param isToSave нужно ли сохранять ссессию между сеансами браузера, была ли нажата кнопка "запомнить меня"
      */
-    private static void Avtorizare(String login, String passwordHash, HttpServletResponse response, HttpSession session) throws UserAuthenticationException{
+    private static void Avtorizare(String login, String passwordHash, HttpServletResponse response, HttpSession session, boolean isToSave) throws UserAuthenticationException{
         //проверка на существование пользователя
         if (!usersMap.containsKey(login)){
             throw new UserAuthenticationException("Пользователь с таким логином не зарегистрирован. Зарегестрируйтесь пожалусйта!");
         }
         //установление куки
-        Cookie loginCookie = new Cookie(COOKIE_LOGIN_NAME, login);
-        loginCookie.setMaxAge(Integer.MAX_VALUE); // кука будет храниться постоянно
-        response.addCookie(loginCookie);
-        Cookie passwordCookie =  new Cookie(COOKIE_PASSWORDHASH_NAME, passwordHash);
-        passwordCookie.setMaxAge(Integer.MAX_VALUE); // -1 кука будет храниться постоянно
-        response.addCookie(passwordCookie);
+        if(isToSave){
+            Cookie loginCookie = new Cookie(COOKIE_LOGIN_NAME, login);
+            loginCookie.setMaxAge(Integer.MAX_VALUE); // кука будет храниться постоянно
+            response.addCookie(loginCookie);
+            Cookie passwordCookie =  new Cookie(COOKIE_PASSWORDHASH_NAME, passwordHash);
+            passwordCookie.setMaxAge(Integer.MAX_VALUE); // -1 кука будет храниться постоянно
+            response.addCookie(passwordCookie);
+        }
         // установление отметку в сессии о том, что авторизация прошла успешно
         session.setAttribute(SESSION_ATTRIBUTE_NAME, true);
     }
@@ -194,7 +198,7 @@ public class WebEngine {
         WebUser newUser = new WebUser(login, hash);
         RegisterWebUser(newUser);
         //теперь авторизация(автоматический вход)
-        Avtorizare(login, hash, response, session);
+        Avtorizare(login, hash, response, session, false);
     }
     
     
