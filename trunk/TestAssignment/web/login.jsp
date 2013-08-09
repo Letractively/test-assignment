@@ -15,12 +15,14 @@
     <body>
     <dir>
         <h1>Авторизация</h1>
-        <jsp:useBean id="userException" scope="page" class="UserMessage">
-        <% if(userException!=null)//yyyttyty %>
+        <jsp:useBean id="userException" scope="request" class="Control.UserMessage" />
         
-        <%= request.getSession().getAttribute("my1") %>
-        <% //request.getSession().setAttribute("my1", "value"); %>
-        <form name="avtorization" id="avtorization" action="Login">
+        <% if(userException.getMessage()!=null){
+         out.print("<i>"+userException.getMessage()+"</i>"); 
+        } %>
+        
+        
+        <form name="avtorization" id="avtorization" action="Login" method="post">
             <input type="text" placeholder="логин" id="login" name="login">
             <p><input type="password" placeholder="пароль" id="password" name="password">
             <p><input type="submit" value="Авторизация">
