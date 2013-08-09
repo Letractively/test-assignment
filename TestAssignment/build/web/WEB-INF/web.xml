@@ -8,6 +8,7 @@
         <filter-name>AvtorizationFilter</filter-name>
         <url-pattern>/Context</url-pattern>
         <url-pattern>/index.jsp</url-pattern>
+        <url-pattern>/context.jsp</url-pattern>
     </filter-mapping>
     <servlet>
         <servlet-name>Registration</servlet-name>

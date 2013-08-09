@@ -12,6 +12,14 @@ public class UserMessage {
     
     private String message;
 
+    public UserMessage(String message) {
+        this.message = message;
+    }
+
+    public UserMessage() {
+    }
+
+    
     public String getMessage() {
         return message;
     }

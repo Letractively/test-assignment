@@ -17,6 +17,11 @@ public class WebEngine {
      */
     public static final String SESSION_ATTRIBUTE_NAME="login";
     /**
+     * в сесси будет храниться и имя текущего пользователя.
+     * Это имя параметра, в котором будет храниться имя (логин) пользователя
+     */
+    public static final String SESSION_USER_NAME="loginName";
+    /**
      * имя куки, в которую будет сохраняться логин
      */
     public static final String COOKIE_LOGIN_NAME="login";
@@ -58,18 +63,20 @@ public class WebEngine {
         }
         //ссесия не начата, возможно пользователь закрыл браузер
         //проверяем, возможно есть сохранненные куки(была нажата кнопка "запомнить меня").
-        for (Cookie cookie : cookies) {
-            if(cookie.getName().equalsIgnoreCase(COOKIE_LOGIN_NAME)){
-                cookieLogin = cookie;
+        if(cookies!=null){
+            for (Cookie cookie : cookies) {
+                if(cookie.getName().equalsIgnoreCase(COOKIE_LOGIN_NAME)){
+                    cookieLogin = cookie;
+                }
+                if(cookie.getName().equalsIgnoreCase(COOKIE_PASSWORDHASH_NAME)){
+                    cookiePasswordHash = cookie;
+                }            
             }
-            if(cookie.getName().equalsIgnoreCase(COOKIE_PASSWORDHASH_NAME)){
-                cookiePasswordHash = cookie;
-            }            
         }
         //проверяем куки
         if(cookieLogin!=null & cookiePasswordHash!=null){
             //куки есть, теперь проверяем, зарегистрирован ли такой пользователь c таким паролем в системе
-            if (!usersMap.containsKey(cookieLogin.getValue())){
+            if (usersMap.containsKey(cookieLogin.getValue())){
                 if (usersMap.get(cookieLogin.getValue()).getPasswordHash().equals(cookiePasswordHash.getValue())){
                     //все нормлаьно, куки те, авторизуеся по кукам
                     Avtorizare(cookieLogin.getValue(), cookiePasswordHash.getValue(), response, session, true);
@@ -125,6 +132,7 @@ public class WebEngine {
         }
         // установление отметку в сессии о том, что авторизация прошла успешно
         session.setAttribute(SESSION_ATTRIBUTE_NAME, true);
+         session.setAttribute(SESSION_USER_NAME, login);
     }
     
     
@@ -158,9 +166,9 @@ public class WebEngine {
      */
     private static boolean isRightPassowrd(String password){
         if(password.length()<PASSWORD_MIN_LENGTH || password.length()>PASSWORD_MAX_LENGTH){
-            return true;
+            return false;
         }
-        return false;
+        return true;
     }
     
     /**
@@ -170,11 +178,17 @@ public class WebEngine {
     private static boolean isRightLogin(String login){
         char[] ch = login.toCharArray();
         
-        for (char c : ch) {
-            //тут проверка на соответствие
-            if(!Character.isDigit(c)| !Character.isLetter(c)){
+        if(Character.isDigit(ch[0])){
                 return false;
             }
+        for (char c : ch) {
+            //тут проверка на соответствие
+            if(!Character.isDigit(c) && !Character.isLetter(c)){
+                return false;
+            }
+            /*if(!Character.isLetter(c)){
+                return false;
+            }*/
         }
         return true;
     }
@@ -188,7 +202,7 @@ public class WebEngine {
             throw new UserAuthenticationException("неверный формат логина.можно вводить только английские буквы и арабские цифры");
         }
         if(!isRightPassowrd(password)){
-            throw new UserAuthenticationException("неверный формат паролья.можно вводить только английские буквы и арабские цифры");
+            throw new UserAuthenticationException("неверный формат паролья.длина паролья не меньше 4 символов");
         }
         if(usersMap.containsKey(login)){
             throw new UserAuthenticationException("пользователь с таким логином уже существует");

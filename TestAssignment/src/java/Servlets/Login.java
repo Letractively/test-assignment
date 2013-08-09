@@ -32,7 +32,12 @@ public class Login extends HttpServlet {
             throws ServletException, IOException {
            RequestDispatcher dispatcherJsp = request.getRequestDispatcher("/login.jsp");
            UserMessage userMessage = null;
-
+           
+           if (request.getParameter("operationtype")!=null){
+                if (request.getParameter("operationtype").equalsIgnoreCase("deavtorizare")){
+                    WebEngine.Deavtorizare(response, request.getSession());
+                }
+           }
            if(request.getParameter("login")!=null && request.getParameter("password")!=null && request.getParameter("operationtype")!=null){
                //присутствуют и логин и пароль, значит была нажата кнопка ввойти/зарегистрироваться.
                try{
@@ -44,10 +49,14 @@ public class Login extends HttpServlet {
                            isToSave=true;
                        }
                        WebEngine.Authenticate(request.getParameter("login"), request.getParameter("password"), response, request.getSession(),isToSave);
+                       response.sendRedirect("Context");
+                       return;
                    }
                    if(request.getParameter("operationtype").equalsIgnoreCase("register")){
                        // нажали зарегистрироваться
                        WebEngine.Registration(request.getParameter("login"), request.getParameter("password"), response, request.getSession());
+                       response.sendRedirect("Context");
+                       return;
                    }
                }catch (UserAuthenticationException ex){
                    request.setAttribute("exception", ex);
@@ -55,9 +64,11 @@ public class Login extends HttpServlet {
            }
            
            
-           if(request.getAttribute("userException")!=null){
-               userMessage.setMessage(((Exception)request.getAttribute("exception")).getMessage());
+           if(request.getAttribute("exception")!=null){
+               userMessage = new UserMessage(((UserAuthenticationException)request.getAttribute("exception")).getMessage());
+               request.setAttribute("userException", userMessage);
            }
+           
            //переходим на страницу
             if (dispatcherJsp!=null){
                 dispatcherJsp.forward(request, response);
